@@ -1,0 +1,182 @@
+import { createContext, useContext, useEffect, useState } from "react";
+import "./styles.css";
+
+const TaskContext = createContext();
+const useTasks = () => useContext(TaskContext);
+
+// useTasks => {tasks, addTask, editTask, deleteTask, updateStatus}
+const ManagerView = () => {
+  const { tasks, addTask, editTask, deleteTask } = useTasks();
+  const [newTask, setNewTask] = useState("");
+  const [editName, setEditName] = useState("");
+  const [editId, setEditId] = useState(null);
+
+  const handleAddTask = () => {
+    console.log("called", newTask, tasks);
+    if (newTask.trim()) {
+      addTask(newTask);
+      setNewTask("");
+    }
+  };
+
+  useEffect(() => {
+    console.log(tasks);
+  });
+
+  return (
+    <div>
+      <h2>Manager View </h2>
+      <input
+        value={newTask}
+        onChange={(e) => setNewTask(e.target.value)}
+        placeholder="New Task Name"
+      />
+      <button onClick={handleAddTask}> Add Task</button>
+
+      {/* task list */}
+      <ul>
+        {tasks.map((task) => {
+          return (
+            <li key={task.id}>
+              {editId === task.id ? (
+                <>
+                  <input
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                  />
+                  <button
+                    onClick={() => {
+                      editTask(task.id, editName);
+                      setEditId(null);
+                    }}
+                  >
+                    Save
+                  </button>
+                </>
+              ) : (
+                <>
+                  <p>
+                    {task.name} {task.status}
+                  </p>
+                  <button
+                    onClick={() => {
+                      setEditId(task.id);
+                      setEditName(task.name);
+                    }}
+                  >
+                    Edit Task
+                  </button>
+                  <button
+                    onClick={() => {
+                      deleteTask(task.id);
+                    }}
+                  >
+                    Delete Task
+                  </button>
+                </>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+};
+
+const EmployeeView = () => {
+  const { tasks, updateStatus } = useTasks();
+  // ["open, inProgress", "done", "all"]
+  const [filter, setFilter] = useState("all");
+
+  const filteredTaskList =
+    filter === "all" ? tasks : tasks.filter((task) => task.status === filter);
+  return (
+    <div>
+      <h2>Employee View</h2>
+
+      <div>
+        <button onClick={() => setFilter("open")}>Open</button>
+        <button onClick={() => setFilter("inProgress")}>In progress</button>
+        <button onClick={() => setFilter("done")}>Done</button>
+        <button onClick={() => setFilter("all")}>All</button>
+      </div>
+
+      {/* task list */}
+      <ul>
+        {filteredTaskList.map((task) => {
+          return (
+            <li key={task.id}>
+              <p>
+                {task.name} {task.status}
+              </p>
+
+              {task.status === "open" && (
+                <button onClick={() => updateStatus(task.id, "inProgress")}>
+                  Start
+                </button>
+              )}
+              {task.status === "inProgress" && (
+                <button onClick={() => updateStatus(task.id, "done")}>
+                  Complete
+                </button>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+};
+
+const TaskProvider = ({ children }) => {
+  const [tasks, setTasks] = useState([]);
+
+  const addTask = (name) => {
+    const newTask = {
+      id: tasks.length ? tasks[tasks.length - 1].id + 1 : 0,
+      name,
+      status: "open",
+    };
+
+    setTasks([...tasks, newTask]);
+  };
+
+  const editTask = (id, newName) => {
+    setTasks(
+      tasks.map((task) => (task.id === id ? { ...task, name: newName } : task))
+    );
+  };
+
+  const deleteTask = (id) => {
+    setTasks(tasks.filter((task) => task.id !== id));
+  };
+
+  const updateStatus = (id, newStatus) => {
+    setTasks(
+      tasks.map((task) =>
+        task.id === id ? { ...task, status: newStatus } : task
+      )
+    );
+  };
+
+  return (
+    <TaskContext.Provider
+      value={{ tasks, addTask, deleteTask, editTask, updateStatus }}
+    >
+      {children}
+    </TaskContext.Provider>
+  );
+};
+
+export default function App() {
+  const [isManagerView, setIsManagerView] = useState(true);
+  return (
+    <TaskProvider>
+      <button onClick={() => setIsManagerView(!isManagerView)}>
+        {" "}
+        Switch View{" "}
+      </button>
+      {isManagerView ? <ManagerView /> : <EmployeeView />}
+    </TaskProvider>
+  );
+}
